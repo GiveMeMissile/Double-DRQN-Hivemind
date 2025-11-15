@@ -2,32 +2,24 @@
 # Trying to not get distracted by Silksong lol (failing this rn).
 
 # Todo: 
-# 1: Curriculum Learning: Add policies for curriculum learning, such as an easier starting world for the AI (DONE)
-#    which will slowly ramp up in difficulty as epsilon decays. Once epsilon is zero the game world will be normal.
-#    Things to modify for curriculum:
-#    a): Player movements, (will also improve Player's random movements)
-#    b): Glue movements
-#    c): Starting locations of all objects
-#    After this is all done multiple iterations will be done to check for improvements (Check #3).
 
-# 2: Training: The current training proccess of the AI has some issues that should be addressed. Mainly with game preformance (Done)
-#    The game will slow down if the batch size or model hyperparams are increased too much. Which limits model variety and size.
-#    In order to fix this the main parts of the AI training will be after a game/episode has been completed. This will allow for
-#    less training within the actual episode. And it will help the AI train and learn faster by having a specified train time.
+# 1: Temporal learning: Allow the LSTM to make use of its h0 and c0 cells by adding sequence length.
+#   This will allow the AI to have a better understading of the enviorment, actions, and more.
+#   It will allow the LSTM to unlock its TRUE POTENTIAL!!!
 
-# 3: Iteration: This is the final step (I hope). I will iterate through the following steps below until the program works as intended. (In Progress)
+# 2: Training Data Saving: Save information which will be used to train the AI outside the game program.
+#   This will allow episode data to be saved into a csv or pickle file to be used later.
+#   This will allow for faster training and quicker testing of hyperparameters. 
+
+# 3: Epsilon Alternating: Alternate between regular and bias epsilon (based on episode). More VARAITY
+
+# 4: Iterations: This is the final step (I hope). I will iterate through the following steps below until the program works as intended. (In Progress)
 #   a): Train the AI for a varying amount of episodes (10-400)
 #   b): Preform data analysis on the results of the training.
 #   c): Change hyperparameters and/or reward values based on the data analysis.
 #   d): Repeat until the AI is functioning as intended.
 
-# 4: Get happy... (Impossible)
-
-# Other things to add: 
-# 1: Disable epsilon during an episode using user input.
-# 2: Showing the current episode on the game window and the total number of episodes.
-# 3: Rework the saving of Actions?
-# 4: Please kill me
+# 5: Get happy... (Impossible)
 
 # Iteration logs:
 #   Iter 1: eps: 190, ais: 3, glues: 0, lr: 0.0001, Other Changes: DNE
@@ -62,18 +54,7 @@
 #   Iter 27: eps: 150, ais: 1, glues: 0, lr: 0.0001, Discount: 0.9, Other changes: Bosted action based rewards, removed clamping, thats it ig.
 #   Iter 28: eps: 150, ais: 1, glues: 0, lr: 0.0001, Discount: 0.9, Other Changes: Improved Model architecture, inceasing the size of the split layers.
 #   Iter 29: eps: 150, ais: 1, glues: 5, lr: 0.0001, Discount: 0.9, Other Changes: Reversion to original training structure, halfed hidden size.
-
-
-# Thing I noticed: Decrease in Rewards does not mean an increase in rewards.
-# In fact, as rewards decrease, loss also decreases. Is this due to the AI not being able to comprehend Positive rewards.
-# So as a result it can only learn to predict low value rewards. The poor AI cannot comprehend a happy life.
-# What a gooberish pessimist, I guess they inherit more from their father than I initially thought.
-
-# Potential reasons:
-# Inconsistancies between positive and negitive rewards.
-# Overcomplication of Positive rewards.
-# Improper AI input and output structure.
-# Discount factor and target model increasing complexity.
+#   Iter 30: eps: 150, ais: 2, glues: 5, lr: 0.0001, Discount: 0.9, Other Changes: Nothing, checking AI Hivemind preformance!!!
 
 
 import torch
@@ -118,7 +99,7 @@ COLLISION_TIMER = 500
 HIDDEN_SIZE = 64*4
 OUTPUT_SIZE = 9
 LEARNING_RATE = 0.0001
-NUM_AI_OBJECTS = 1
+NUM_AI_OBJECTS = 2
 NUM_SAVED_FRAMES = 20
 SEQUENCE_LENGTH = 4 + (13 * NUM_AI_OBJECTS) + (2 * GLUES) # 4 for player, 13 for each AI, 2 for each glue.
 INPUT_SHAPE = (NUM_SAVED_FRAMES, SEQUENCE_LENGTH)
@@ -162,7 +143,7 @@ NO_MOVEMENT = -8
 AI_COLLISION = -5 
 
 # Other important stuff
-iteration = 29  # Used for data saving and testing purposes.
+iteration = 30  # Used for data saving and testing purposes.
 training = False  # If AI is going to be actively training (if true then activiates curriculum, data saving, and post game training)
 delete_model_file = False # If True then if a model file exists for the current variables, it gets deleated and replaced by a new model.
 device = "cuda" if torch.cuda.is_available() else "cpu"  # Device agnostic code ig
