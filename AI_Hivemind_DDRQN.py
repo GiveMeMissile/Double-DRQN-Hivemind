@@ -1,5 +1,4 @@
 # Note: I am SO CLOSE (I think lol)
-# Trying to not get distracted by Silksong lol (failing this rn).
 
 # Todo: 
 
@@ -80,7 +79,7 @@ RED = (255, 0, 0)
 
 # Glue constants
 GLUE_DIM = 75
-GLUES = 5
+GLUES = 1
 GLUE_MOVEMENT_TIME = 5000
 
 # Other object constants (player + AI objects)
@@ -99,7 +98,7 @@ COLLISION_TIMER = 500
 HIDDEN_SIZE = 64*4
 OUTPUT_SIZE = 9
 LEARNING_RATE = 0.0001
-NUM_AI_OBJECTS = 2
+NUM_AI_OBJECTS = 1
 NUM_SAVED_FRAMES = 20
 SEQUENCE_LENGTH = 4 + (13 * NUM_AI_OBJECTS) + (2 * GLUES) # 4 for player, 13 for each AI, 2 for each glue.
 INPUT_SHAPE = (NUM_SAVED_FRAMES, SEQUENCE_LENGTH)
@@ -113,7 +112,7 @@ EPSILON_ACTIVE = True # Determines if epsilon is active
 BIASED_EPSILON = True
 EPSILON_TIME_MAX, EPSILON_TIME_MIN = 500, 100
 TRAINING_INCREMENT = 100 # How many episodes/games the ai plays until values return to the original
-EPSILON_DECAY = 100
+EPSILON_DECAY = 5
 INITIAL_EPSILON = 1
 AI_SAVE_DATA = {
     "Model": [],
@@ -143,8 +142,8 @@ NO_MOVEMENT = -8
 AI_COLLISION = -5 
 
 # Other important stuff
-iteration = 30  # Used for data saving and testing purposes.
-training = False  # If AI is going to be actively training (if true then activiates curriculum, data saving, and post game training)
+iteration = -1  # Used for data saving and testing purposes.
+training = True  # If AI is going to be actively training (if true then activiates curriculum, data saving, and post game training)
 delete_model_file = False # If True then if a model file exists for the current variables, it gets deleated and replaced by a new model.
 device = "cuda" if torch.cuda.is_available() else "cpu"  # Device agnostic code ig
 window = pygame.display.set_mode((WINDOW_X, WINDOW_Y))  # Pygame window wow
@@ -821,7 +820,11 @@ class AIHivemindManager: # HIVEMIND TIME!!!
     previous_memory = None
     memory = torch.zeros((NUM_SAVED_FRAMES, SEQUENCE_LENGTH), dtype=torch.float32).to(device)
 
-    def __init__(self, num_ais, glues, player, data_manager, model_number):
+    glues = None
+    player = None
+    ai_list = None
+
+    def __init__(self, num_ais, data_manager, model_number):
         # Set up the policy and target model.
         self.policy_model = HivemindLSTM(NUM_LAYERS, SEQUENCE_LENGTH, HIDDEN_SIZE, OUTPUT_SIZE, num_ais).to(device)
         self.model_number = model_number
@@ -830,21 +833,24 @@ class AIHivemindManager: # HIVEMIND TIME!!!
         self.target_model.load_state_dict(self.policy_model.state_dict())
         self.optimizer = torch.optim.Adam(self.policy_model.parameters(), lr=LEARNING_RATE)
 
-        # Save important parameters
+        # Save data manager
+        self.data_manager = data_manager
+
+    def set(self, glues, player):
         self.glues = glues
         self.player = player
-        self.ai_list = self.create_ais(num_ais)
-        self.data_manager = data_manager
+        self.ai_list = self.create_ais(NUM_AI_OBJECTS)
 
     def create_ais(self, num_ais):
         ais = []
         for i in range(num_ais):
+
             ai_object = AI(
                 PLAYER_DIM, 
                 PLAYER_DIM, 
                 window, 
                 RED,
-                [self.player] + self.glues,
+                ([self.player] + self.glues),
                 (PLAYER_DIM+GLUE_DIM)/2
                 )
             ai_object.itr = i
@@ -1409,8 +1415,9 @@ def game_end(ai_manager, player, progress_tracker, time, data_manager, end):
         new_epsilon = ai_manager.epsilon
 
     ai_manager.epsilon = new_epsilon
-    ai_manager.ai_save_data["Epsilon"][ai_manager.idx] = new_epsilon
-    ai_manager.save_model()
+    if end:
+        ai_manager.ai_save_data["Epsilon"][ai_manager.idx] = new_epsilon
+        ai_manager.save_model()
 
     previous_time = pygame.time.get_ticks()
 
@@ -1496,7 +1503,7 @@ def draw_game(player, glues, time, ai_manager):
     pygame.display.flip()
 
 
-def main(progress_tracker, data_manager, model_number, curriculum):
+def main_loop(progress_tracker, data_manager, model_number, curriculum, ai_manager):
     end = False
     num_frames = 0
     running = True
@@ -1506,7 +1513,8 @@ def main(progress_tracker, data_manager, model_number, curriculum):
     for _ in range(GLUES):
         glue = Glue(GLUE_DIM, GLUE_DIM, window, YELLOW, [player]+glues, distance=GLUE_DIM)
         glues.append(glue)
-    ai_manager = AIHivemindManager(NUM_AI_OBJECTS, glues, player, data_manager, model_number)
+    ai_manager.set(glues, player)
+    # ai_manager = AIHivemindManager(NUM_AI_OBJECTS, glues, player, data_manager, model_number)
 
     # Game loop, YIPPEEEEEEE
     while running:
@@ -1566,10 +1574,17 @@ def main(progress_tracker, data_manager, model_number, curriculum):
 if __name__ == "__main__":
     progress_tracker = ProgressTracker(iteration)
     data_manager = TrainingData(max_length=3600)
-    model_number = None
     curriculum = CurriculumManager(training)
+    model_number = None
     if delete_model_file:
         model_number = kill_model()
+
+    # player = Player(PLAYER_DIM, PLAYER_DIM, window, WHITE, objects=[], distance=None, curriculum=curriculum) # x=WINDOW_X/2-PLAYER_DIM/2, y=WINDOW_Y/2-PLAYER_DIM/2
+    # glues = []
+    # for _ in range(GLUES):
+    #     glue = Glue(GLUE_DIM, GLUE_DIM, window, YELLOW, [player]+glues, distance=GLUE_DIM)
+    #     glues.append(glue)
+    ai_manager = AIHivemindManager(NUM_AI_OBJECTS, data_manager, model_number)
 
     episodes = 0
     run = True
@@ -1578,7 +1593,7 @@ if __name__ == "__main__":
     check_for_folder()
     while run:
         progress_tracker.append(episodes, "Episodes")
-        run = main(progress_tracker, data_manager, model_number, curriculum)
+        run = main_loop(progress_tracker, data_manager, model_number, curriculum, ai_manager)
         episodes += 1
         curriculum.increase_difficulty(episodes)
         if episodes > MAX_EPISODES:
