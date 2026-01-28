@@ -2,7 +2,7 @@ import torch
 import pygame
 
 # Game constants
-MAX_EPISODES = 1
+MAX_EPISODES = 150
 WINDOW_X, WINDOW_Y = 1500, 750
 TIME_LIMIT = 60000
 BLACK = (0, 0, 0)
@@ -56,7 +56,7 @@ EPSILON_DECAY = 100
 INITIAL_EPSILON = 1
 
 # Data Config
-DATA_COLLECTION = False
+DATA_COLLECTION = True
 PROGRESS_DATA_SAVE = False
 LOAD_PREVIOUS_DATA = False
 
@@ -101,7 +101,7 @@ NO_MOVEMENT = -2
 AI_COLLISION = -5
 
 # Other important stuff
-iteration = 50  # Used for data saving and testing purposes.
+iteration = 51  # Used for data saving and testing purposes.
 training = False  # If AI is going to be actively training (if true then activiates curriculum, data saving, and post game training)
 delete_model_file = False # If True then if a model file exists for the current variables, it gets deleated and replaced by a new model.
 curriculum = False # Determines if curriculum is active or not.

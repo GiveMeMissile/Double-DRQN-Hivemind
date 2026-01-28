@@ -414,7 +414,7 @@ class AI(Object):
             bias += 5
 
         if self.in_glue:
-            bias -= .3
+            bias -= .2
 
         if self.collided_with_ai:
             bias -= 1
